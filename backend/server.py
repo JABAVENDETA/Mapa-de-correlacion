@@ -6,7 +6,7 @@ import os
 import logging
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict
-from typing import List
+from typing import List, Dict, Any
 import uuid
 from datetime import datetime, timezone
 
@@ -14,59 +14,90 @@ from datetime import datetime, timezone
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-# MongoDB connection
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
-# Create the main app without a prefix
 app = FastAPI()
-
-# Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
 
 
-# Define Models
-class StatusCheck(BaseModel):
-    model_config = ConfigDict(extra="ignore")  # Ignore MongoDB's _id field
-    
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    client_name: str
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+class GeoJSONFeature(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    type: str = "Feature"
+    properties: Dict[str, Any]
+    geometry: Dict[str, Any]
 
-class StatusCheckCreate(BaseModel):
-    client_name: str
+class GeoJSONCollection(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    type: str = "FeatureCollection"
+    features: List[GeoJSONFeature]
 
-# Add your routes to the router instead of directly to app
+class LayerStats(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    layer_name: str
+    total_value: float
+    avg_value: float
+    max_value: float
+    affected_regions: int
+
+
 @api_router.get("/")
 async def root():
-    return {"message": "Hello World"}
+    return {"message": "Colombia Narco Impact Map API"}
 
-@api_router.post("/status", response_model=StatusCheck)
-async def create_status_check(input: StatusCheckCreate):
-    status_dict = input.model_dump()
-    status_obj = StatusCheck(**status_dict)
-    
-    # Convert to dict and serialize datetime to ISO string for MongoDB
-    doc = status_obj.model_dump()
-    doc['timestamp'] = doc['timestamp'].isoformat()
-    
-    _ = await db.status_checks.insert_one(doc)
-    return status_obj
+@api_router.get("/layers/{layer_type}", response_model=GeoJSONCollection)
+async def get_layer_data(layer_type: str):
+    """
+    Get GeoJSON data for a specific layer
+    layer_type: coca, violence, armed_groups, murders, poverty
+    """
+    data = await db.geo_data.find_one({"layer_type": layer_type}, {"_id": 0})
+    if not data:
+        return {"type": "FeatureCollection", "features": []}
+    return data
 
-@api_router.get("/status", response_model=List[StatusCheck])
-async def get_status_checks():
-    # Exclude MongoDB's _id field from the query results
-    status_checks = await db.status_checks.find({}, {"_id": 0}).to_list(1000)
-    
-    # Convert ISO string timestamps back to datetime objects
-    for check in status_checks:
-        if isinstance(check['timestamp'], str):
-            check['timestamp'] = datetime.fromisoformat(check['timestamp'])
-    
-    return status_checks
+@api_router.get("/stats", response_model=List[LayerStats])
+async def get_all_stats():
+    """
+    Get statistics for all layers
+    """
+    stats = await db.layer_stats.find({}, {"_id": 0}).to_list(100)
+    return stats
 
-# Include the router in the main app
+@api_router.get("/stats/{layer_type}", response_model=LayerStats)
+async def get_layer_stats(layer_type: str):
+    """
+    Get statistics for a specific layer
+    """
+    stats = await db.layer_stats.find_one({"layer_name": layer_type}, {"_id": 0})
+    return stats
+
+@api_router.get("/region/{region_name}")
+async def get_region_data(region_name: str):
+    """
+    Get all layer data for a specific region (departamento)
+    """
+    region_data = {}
+    layers = ["coca", "violence", "armed_groups", "murders", "poverty"]
+    
+    for layer in layers:
+        data = await db.geo_data.find_one(
+            {"layer_type": layer},
+            {"_id": 0}
+        )
+        if data:
+            for feature in data.get("features", []):
+                if feature["properties"].get("name") == region_name:
+                    region_data[layer] = feature["properties"].get("value", 0)
+                    break
+    
+    return {
+        "region": region_name,
+        "data": region_data
+    }
+
+
 app.include_router(api_router)
 
 app.add_middleware(
@@ -77,7 +108,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
