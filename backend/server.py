@@ -41,6 +41,12 @@ class LayerStats(BaseModel):
     max_value: float
     affected_regions: int
 
+class CorrelationAnalysis(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    hotspots: List[Dict[str, Any]]
+    correlations: Dict[str, float]
+    high_risk_regions: List[str]
+
 
 @api_router.get("/")
 async def root():
@@ -96,6 +102,73 @@ async def get_region_data(region_name: str):
         "region": region_name,
         "data": region_data
     }
+
+@api_router.get("/correlation/analysis", response_model=CorrelationAnalysis)
+async def get_correlation_analysis():
+    """
+    Analyze correlations between different layers and identify hotspots
+    """
+    layers = ["coca", "violence", "armed_groups", "murders", "poverty"]
+    
+    all_regions_data = {}
+    
+    for layer in layers:
+        data = await db.geo_data.find_one({"layer_type": layer}, {"_id": 0})
+        if data:
+            for feature in data.get("features", []):
+                region_name = feature["properties"].get("name")
+                value = feature["properties"].get("value", 0)
+                
+                if region_name not in all_regions_data:
+                    all_regions_data[region_name] = {}
+                all_regions_data[region_name][layer] = value
+    
+    hotspots = []
+    for region, data in all_regions_data.items():
+        active_layers = sum(1 for v in data.values() if v > 0)
+        if active_layers >= 3:
+            total_score = sum([
+                normalize_value(data.get('coca', 0), 50000),
+                normalize_value(data.get('violence', 0), 1000),
+                normalize_value(data.get('armed_groups', 0), 100),
+                normalize_value(data.get('murders', 0), 3000),
+                normalize_value(data.get('poverty', 0), 70)
+            ])
+            
+            hotspots.append({
+                "region": region,
+                "risk_score": round(total_score, 2),
+                "active_factors": active_layers,
+                "data": data
+            })
+    
+    hotspots.sort(key=lambda x: x['risk_score'], reverse=True)
+    
+    coca_violence_regions = [r for r, d in all_regions_data.items() 
+                             if d.get('coca', 0) > 0 and d.get('violence', 0) > 0]
+    coca_poverty_regions = [r for r, d in all_regions_data.items() 
+                            if d.get('coca', 0) > 0 and d.get('poverty', 0) > 0]
+    all_factors_regions = [r for r, d in all_regions_data.items() 
+                           if all(d.get(layer_name, 0) > 0 for layer_name in layers)]
+    
+    total_regions = len(all_regions_data)
+    correlations = {
+        "coca_violence": round(len(coca_violence_regions) / total_regions * 100, 1) if total_regions > 0 else 0,
+        "coca_poverty": round(len(coca_poverty_regions) / total_regions * 100, 1) if total_regions > 0 else 0,
+        "all_factors": round(len(all_factors_regions) / total_regions * 100, 1) if total_regions > 0 else 0
+    }
+    
+    high_risk_regions = [h['region'] for h in hotspots[:10]]
+    
+    return {
+        "hotspots": hotspots[:15],
+        "correlations": correlations,
+        "high_risk_regions": high_risk_regions
+    }
+
+def normalize_value(value: float, max_val: float) -> float:
+    """Normalize value to 0-100 scale"""
+    return min((value / max_val) * 100, 100) if max_val > 0 else 0
 
 
 app.include_router(api_router)

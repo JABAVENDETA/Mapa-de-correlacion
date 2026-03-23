@@ -24,12 +24,12 @@ export default function MapComponent({ activeLayers, layerData, onRegionClick })
   const getLayerStyle = (layerType) => (feature) => {
     const value = feature.properties.value || 0;
     const maxValue = getMaxValue(layerType);
-    const opacity = value > 0 ? 0.3 + (value / maxValue) * 0.5 : 0;
+    const opacity = value > 0 ? 0.4 + (value / maxValue) * 0.5 : 0;
 
     return {
       fillColor: LAYER_COLORS[layerType],
-      weight: 1,
-      opacity: 0.6,
+      weight: value > 0 ? 1 : 0,
+      opacity: value > 0 ? 0.6 : 0,
       color: LAYER_COLORS[layerType],
       fillOpacity: opacity
     };

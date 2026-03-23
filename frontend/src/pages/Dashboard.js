@@ -3,6 +3,7 @@ import axios from 'axios';
 import MapComponent from '@/components/MapComponent';
 import LeftPanel from '@/components/LeftPanel';
 import RightPanel from '@/components/RightPanel';
+import CorrelationPanel from '@/components/CorrelationPanel';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -96,6 +97,8 @@ export default function Dashboard() {
         stats={stats}
         selectedRegion={selectedRegion}
       />
+      
+      <CorrelationPanel />
     </div>
   );
 }
