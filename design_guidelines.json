@@ -1,0 +1,92 @@
+{
+  "project_type": "Geopolitical Analytics Dashboard",
+  "theme": "dark",
+  "archetype": "SWISS & HIGH-CONTRAST (Authority, Clarity, Truth)",
+  "typography": {
+    "headings": "Chivo",
+    "body": "IBM Plex Sans",
+    "mono": "JetBrains Mono",
+    "rules": "Headings must use tight letter spacing (tracking-tight). Overlines must be uppercase, tiny, and wide spacing (tracking-[0.2em]). Mono font for all KPIs, stats, and coordinates. Center align only if it improves hierarchy; left-align data and paragraphs."
+  },
+  "colors": {
+    "background": "#09090b",
+    "surface": "rgba(9, 9, 11, 0.75)",
+    "border": "rgba(255, 255, 255, 0.12)",
+    "text_primary": "#fafafa",
+    "text_secondary": "#a1a1aa",
+    "map_layers": {
+      "coca_crops": { "color": "#a3e635", "tailwind": "lime-400" },
+      "violence": { "color": "#f97316", "tailwind": "orange-500" },
+      "armed_groups": { "color": "#06b6d4", "tailwind": "cyan-500" },
+      "murders": { "color": "#e11d48", "tailwind": "rose-600" },
+      "poverty": { "color": "#eab308", "tailwind": "yellow-500" }
+    },
+    "rules": "Never use pure black or pure gray. Tint with blue/slate. The UI should remain monochromatic (zinc/slate) so the map layer colors stand out. Forbidden: Teal green/blue for standard UI elements."
+  },
+  "surfaces": {
+    "panels": "Crystal Glass variant: bg-zinc-950/80 backdrop-blur-2xl border border-white/10 shadow-2xl. This ensures the map is visible beneath the UI panels.",
+    "cards_internal": "Flat Solid: bg-white/5 border border-white/5 rounded-md p-4.",
+    "rules": "CRITICAL: Do NOT use completely transparent backgrounds where text overlays the map. Always use the Crystal Glass surface."
+  },
+  "layout": {
+    "strategy": "Full-Bleed Map Dashboard",
+    "structure": [
+      "Background: 100vw, 100vh Map container (React Leaflet).",
+      "Floating Left Panel (w-80 or w-96): Contains Title, Layer Toggles (Bento list), and Legends. Pin to top-left with m-6 z-[400].",
+      "Floating Right Panel (w-96): Contains KPI stats, Recharts (Bar/Line for selected region), and Demographic details. Pin to top-right with m-6 z-[400]."
+    ],
+    "spacing": "Generous Spacing (p-6, p-8) inside panels. Use High Density Grid (gap-4) for KPI bento boxes inside the right panel."
+  },
+  "components": {
+    "layer_toggles": "Customized Shadcn Switch or Checkbox. When active, the switch thumb or track should match the specific layer's color.",
+    "kpi_cards": "Minimalist, top-aligned data. Large Mono font for the number. Sparkline chart below.",
+    "charts": "Recharts. Tooltips must use Crystal Glass surface. Lines/Bars color-coded to match the map layer they represent.",
+    "map": "React Leaflet. Must use a Dark Mode tile provider (e.g., CartoDB Dark Matter) so neon data layers pop."
+  },
+  "motion": {
+    "panels": "Slide in from left/right on initial load.",
+    "interactions": "Hover states on map polygons should subtly increase opacity and show a tooltip. Toggling a layer should smoothly fade the layer in/out.",
+    "rules": "Disable transforms if using universal transitions. Use specific transitions (transition-colors, transition-opacity)."
+  },
+  "icons": {
+    "library": "@phosphor-icons/react",
+    "style": "Duotone or Regular. Keep consistent."
+  },
+  "accessibility": {
+    "data_testing": "All interactive and key informational elements MUST include a data-testid attribute. e.g., data-testid='layer-toggle-coca'.",
+    "contrast": "Ensure text meets APCA standards against backgrounds."
+  },
+  "media": {
+    "images": [],
+    "instructions": "This is a map-heavy dashboard. Avoid unnecessary photos. Use Phosphor icons for layer iconography."
+  },
+  "3d_libraries": {
+    "primary": "React Leaflet (2D Maps)",
+    "instructions": "Use React Leaflet as the core. 3D isn't strictly necessary, keep it 2D for analytical clarity."
+  },
+  "instructions_to_main_agent": [
+    "Install React Leaflet and its types: yarn add react-leaflet leaflet && yarn add -D @types/leaflet",
+    "Install Phosphor icons: yarn add @phosphor-icons/react",
+    "Install Recharts: yarn add recharts",
+    "Configure Tailwind with the specified typography and colors in tailwind.config.js.",
+    "Use a dark basemap for Leaflet (e.g., 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').",
+    "Build the UI as absolute positioned overlay panels over the full-screen map. Use z-[400] for UI panels so they sit above Leaflet's default panes.",
+    "Implement Shadcn UI for the controls (Switch, Card). Note: Use .jsx/.js files, do NOT create .tsx files.",
+    "Mock the geospatial data (GeoJSON) for Colombia for the 5 layers if real backend data is not immediately available. Ensure the mock GeoJSON has varying intensities for the layers to demonstrate visual overlaps.",
+    "Ensure map polygons have onEachFeature handlers for hover tooltips and click-to-detail."
+  ],
+  "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": [
+    "You tend to converge toward generic, 'on distribution' outputs. Avoid this.",
+    "Dark colors look good when used independently without gradients. DO NOT use dark colors as gradients.",
+    "Don't make generic centered layouts. Create depth through layered design elements with z-index hierarchy.",
+    "Use glass-morphism effects with backdrop filters (12-24px blur).",
+    "You MUST NOT apply universal transition. Eg: transition: all. Always add transitions for specific interactive elements excluding transforms.",
+    "You MUST NOT center align the app container, ie do not add .App { text-align: center; } in the css file.",
+    "Always use modern button styles like pill-shaped, or sharp button with interaction animations.",
+    "NEVER use AI assistant Emoji characters for icons.",
+    "Prioritize using pre-existing components from src/components/ui.",
+    "Components MUST use named exports. Pages MUST use default exports.",
+    "Use sonner for toasts.",
+    "Remember to output standard JavaScript (.js/.jsx), NOT TypeScript (.tsx)."
+  ]
+}
