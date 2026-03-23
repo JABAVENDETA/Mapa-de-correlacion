@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Lightning, TrendUp, Warning } from '@phosphor-icons/react';
+import { Lightning, Warning } from '@phosphor-icons/react';
 import axios from 'axios';
+import NetworkGraph from './NetworkGraph';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -28,7 +29,7 @@ export default function CorrelationPanel() {
   if (loading) {
     return (
       <div 
-        className="floating-panel bottom-6 left-6 w-80"
+        className="floating-panel bottom-6 left-6 w-96"
         style={{ animation: 'slideIn 0.5s ease-out 0.4s backwards' }}
       >
         <div className="bg-zinc-950/80 backdrop-blur-2xl border border-white/10 rounded-lg shadow-2xl p-6">
@@ -42,7 +43,7 @@ export default function CorrelationPanel() {
 
   return (
     <div 
-      className="floating-panel bottom-6 left-6 w-80"
+      className="floating-panel bottom-6 left-6 w-96"
       data-testid="correlation-panel"
       style={{ animation: 'slideIn 0.5s ease-out 0.4s backwards' }}
     >
@@ -58,7 +59,7 @@ export default function CorrelationPanel() {
             </h2>
           </div>
           <button 
-            className="text-zinc-400 hover:text-zinc-200 transition-colors"
+            className="text-zinc-400 hover:text-zinc-200 transition-colors text-xl w-6 h-6 flex items-center justify-center"
             data-testid="correlation-toggle"
           >
             {expanded ? '−' : '+'}
@@ -102,6 +103,8 @@ export default function CorrelationPanel() {
               </div>
             </div>
 
+            <NetworkGraph hotspots={analysis.hotspots} />
+
             <div className="bg-white/5 border border-white/5 rounded-md p-4">
               <h3 className="text-xs uppercase tracking-wide text-zinc-500 mb-3 font-plex">
                 Top Zonas Calientes
@@ -115,10 +118,10 @@ export default function CorrelationPanel() {
                   >
                     <div className="flex items-center gap-2">
                       <div 
-                        className="w-1 h-1 rounded-full"
+                        className="w-1.5 h-1.5 rounded-full"
                         style={{
-                          backgroundColor: hotspot.risk_score > 250 ? '#e11d48' : 
-                                          hotspot.risk_score > 200 ? '#f97316' : '#eab308'
+                          backgroundColor: hotspot.risk_score > 300 ? '#e11d48' : 
+                                          hotspot.risk_score > 250 ? '#f97316' : '#eab308'
                         }}
                       />
                       <span className="text-xs text-zinc-300 font-plex">
