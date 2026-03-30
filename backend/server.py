@@ -82,21 +82,22 @@ async def get_layer_stats(layer_type: str):
 @api_router.get("/region/{region_name}")
 async def get_region_data(region_name: str):
     """
-    Get all layer data for a specific region (departamento)
+    Get all layer data for a specific region (municipality)
     """
     region_data = {}
     layers = ["coca", "violence", "armed_groups", "murders", "poverty"]
     
-    for layer in layers:
-        data = await db.geo_data.find_one(
-            {"layer_type": layer},
-            {"_id": 0}
-        )
-        if data:
-            for feature in data.get("features", []):
-                if feature["properties"].get("name") == region_name:
-                    region_data[layer] = feature["properties"].get("value", 0)
-                    break
+    all_data = await db.geo_data.find(
+        {"layer_type": {"$in": layers}},
+        {"_id": 0}
+    ).to_list(5)
+    
+    for data in all_data:
+        layer_type = data.get("layer_type")
+        for feature in data.get("features", []):
+            if feature["properties"].get("name") == region_name:
+                region_data[layer_type] = feature["properties"].get("value", 0)
+                break
     
     return {
         "region": region_name,
@@ -112,16 +113,20 @@ async def get_correlation_analysis():
     
     all_regions_data = {}
     
-    for layer in layers:
-        data = await db.geo_data.find_one({"layer_type": layer}, {"_id": 0})
-        if data:
-            for feature in data.get("features", []):
-                region_name = feature["properties"].get("name")
-                value = feature["properties"].get("value", 0)
-                
-                if region_name not in all_regions_data:
-                    all_regions_data[region_name] = {}
-                all_regions_data[region_name][layer] = value
+    all_data = await db.geo_data.find(
+        {"layer_type": {"$in": layers}},
+        {"_id": 0}
+    ).to_list(5)
+    
+    for data in all_data:
+        layer = data.get("layer_type")
+        for feature in data.get("features", []):
+            region_name = feature["properties"].get("name")
+            value = feature["properties"].get("value", 0)
+            
+            if region_name not in all_regions_data:
+                all_regions_data[region_name] = {}
+            all_regions_data[region_name][layer] = value
     
     hotspots = []
     for region, data in all_regions_data.items():
