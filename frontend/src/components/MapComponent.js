@@ -80,6 +80,7 @@ export default function MapComponent({ activeLayers, layerData, onRegionClick })
         center={[4.5709, -74.2973]}
         zoom={6}
         zoomControl={false}
+        preferCanvas={true}
         style={{ width: '100%', height: '100%' }}
         whenCreated={setMap}
       >
