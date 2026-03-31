@@ -181,18 +181,53 @@ MUNICIPALITY_DATA = {
     }
 }
 
+def create_triangle_polygon(lat, lon, radius_km=8):
+    """Create a triangle polygon around a point"""
+    import math
+    coords = []
+    for i in range(4):
+        angle = (i * 2 * math.pi / 3) - (math.pi / 2)
+        dx = radius_km * math.cos(angle) / 111.0
+        dy = radius_km * math.sin(angle) / (111.0 * math.cos(lat * math.pi / 180))
+        coords.append([lon + dy, lat + dx])
+    return coords
+
 def create_circle_polygon(lat, lon, radius_km=8):
-    """Create a circular polygon around a point - smaller for municipalities"""
+    """Create a circular polygon around a point"""
     import math
     points = 16
     coords = []
-    
     for i in range(points + 1):
         angle = (i * 2 * math.pi) / points
         dx = radius_km * math.cos(angle) / 111.0
         dy = radius_km * math.sin(angle) / (111.0 * math.cos(lat * math.pi / 180))
         coords.append([lon + dy, lat + dx])
+    return coords
+
+def create_diamond_polygon(lat, lon, radius_km=8):
+    """Create a diamond/rhombus polygon around a point"""
+    import math
+    coords = []
+    for i in range(5):
+        angle = (i * math.pi / 2)
+        dx = radius_km * math.cos(angle) / 111.0
+        dy = radius_km * math.sin(angle) / (111.0 * math.cos(lat * math.pi / 180))
+        coords.append([lon + dy, lat + dx])
+    return coords
+
+def create_star_polygon(lat, lon, radius_km=8):
+    """Create a star polygon around a point"""
+    import math
+    coords = []
+    outer_radius = radius_km
+    inner_radius = radius_km * 0.4
     
+    for i in range(11):
+        angle = (i * 2 * math.pi / 10) - (math.pi / 2)
+        radius = outer_radius if i % 2 == 0 else inner_radius
+        dx = radius * math.cos(angle) / 111.0
+        dy = radius * math.sin(angle) / (111.0 * math.cos(lat * math.pi / 180))
+        coords.append([lon + dy, lat + dx])
     return coords
 
 async def seed_database():
@@ -201,15 +236,25 @@ async def seed_database():
     await db.geo_data.delete_many({})
     await db.layer_stats.delete_many({})
     
+    # Define shape for each layer
+    layer_shapes = {
+        "coca": create_triangle_polygon,
+        "violence": create_triangle_polygon,
+        "armed_groups": create_circle_polygon,
+        "murders": create_star_polygon,
+        "poverty": create_diamond_polygon
+    }
+    
     for layer_type, layer_values in MUNICIPALITY_DATA.items():
         features = []
+        shape_function = layer_shapes[layer_type]
         
         for municipality in COLOMBIA_MUNICIPALITIES:
             muni_name = municipality["name"]
             value = layer_values.get(muni_name, 0)
             
             lat, lon = municipality["coords"]
-            polygon_coords = create_circle_polygon(lat, lon, radius_km=8)
+            polygon_coords = shape_function(lat, lon, radius_km=8)
             
             feature = {
                 "type": "Feature",
